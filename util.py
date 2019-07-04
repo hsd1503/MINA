@@ -29,7 +29,7 @@ def filter_channel(x):
     wander = (0.001, 0.5)
     noise = 50
     
-    bandpass_list = [P_wave, QRS_complex, wander, ECG_preprocessed]
+    bandpass_list = [wander, ECG_preprocessed]
     highpass_list = [noise]
     
     nyquist_freq = 0.5 * signal_freq
