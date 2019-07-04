@@ -20,6 +20,7 @@ def filter_channel(x):
     
     signal_freq = 300
     
+    ### candidate channels for ECG
     P_wave = (0.67,5)
     QRS_complex = (10,50)
     T_wave = (1,7)
@@ -29,6 +30,7 @@ def filter_channel(x):
     wander = (0.001, 0.5)
     noise = 50
     
+    ### use low (wander), middle (ECG_preprocessed) and high (noise) for example
     bandpass_list = [wander, ECG_preprocessed]
     highpass_list = [noise]
     
