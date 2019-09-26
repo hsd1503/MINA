@@ -61,7 +61,7 @@ def slide_and_cut(X, Y, window_size):
     out_X = []
     out_Y = []
     n_sample = X.shape[0]
-    mode = -1
+    mode = 0
 
     for i in range(n_sample):
         tmp_ts = X[i]
@@ -69,7 +69,7 @@ def slide_and_cut(X, Y, window_size):
 
         if mode = 0
             ### slide to get more training samples
-            stride = 200
+            stride = 100
         else:
             ### or we can just select 1 sample from each, which is more likely to be clean signal
             stride = int(len(tmp_ts) - window_size/2)
