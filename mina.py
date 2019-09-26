@@ -29,7 +29,7 @@ class Net(nn.Module):
         self.n_channel = n_channel
         self.n_dim = n_dim
         self.n_split = n_split
-        self.n_class = 4
+        self.n_class = 2
         
         self.base_net_0 = BaseNet(self.n_dim, self.n_split)
         self.base_net_1 = BaseNet(self.n_dim, self.n_split)
