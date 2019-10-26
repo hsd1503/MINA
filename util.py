@@ -67,7 +67,7 @@ def slide_and_cut(X, Y, window_size):
         tmp_ts = X[i]
         tmp_Y = Y[i]
 
-        if mode = 0
+        if mode == 0:
             ### slide to get more training samples
             stride = 100
         else:
