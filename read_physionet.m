@@ -23,5 +23,6 @@ while ischar(str)
     fprintf(fout, '%s,', label);
     fprintf(fout, '%f,',ecg(1:tmp_len-1));
     fprintf(fout, '%f\n',ecg(tmp_len));
-	
+    str=fgetl(fin);
+end
 fclose(fout);
