@@ -1,6 +1,5 @@
 # MINA: Multilevel Knowledge-Guided Attention for Modeling Electrocardiography Signals, IJCAI 2019
 
-(2019-12-26) Clean util.py, using python for preprocessing instead of Matlab. 
 
 # Usage
 ```
@@ -12,8 +11,6 @@ python main.py
 # Environment
 
 Python 3.7.5, PyTorch 1.2.0
-
-
 
 If you find the idea useful or use this code in your own work, please cite our [paper](https://www.ijcai.org/proceedings/2019/0816.pdf) as
 ```
