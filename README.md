@@ -1,5 +1,7 @@
 # MINA: Multilevel Knowledge-Guided Attention for Modeling Electrocardiography Signals, IJCAI 2019
 
+(2019-12-26) Clean util.py, using python for preprocessing instead of Matlab. 
+
 # Usage
 ```
 # Downloading the data from https://physionet.org/content/challenge-2017/1.0.0/, including REFERENCE-v3.csv, training2017/
