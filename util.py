@@ -8,15 +8,13 @@ import random
 from tqdm import tqdm
 from collections import OrderedDict, Counter
 
-from sklearn.metrics import roc_auc_score
-from sklearn.metrics import average_precision_score
-from sklearn.metrics import f1_score
+from sklearn.metrics import roc_auc_score, average_precision_score, f1_score
 from sklearn.metrics import log_loss
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import train_test_split
 
 import scipy.io
-from scipy.signal import butter, lfilter
+from scipy.signal import butter, lfilter, periodogram
 
 
 def preprocess_physionet(data_path):
@@ -108,7 +106,34 @@ def slide_and_cut(X, Y, window_size, stride, output_pid=False):
     else:
         return np.array(out_X), np.array(out_Y)
 
-def make_data_physionet(data_path, window_size=3000, stride=500):
+def compute_beat(X):
+    out = np.zeros((X.shape[0], X.shape[1], X.shape[2]))
+    for i in tqdm(range(out.shape[0]), desc="compute_beat"):
+        for j in range(out.shape[1]):
+            out[i, j] = np.concatenate([[0], np.abs(np.diff(X[i,j,:]))])
+    return out
+
+def compute_rhythm(X, n_split):
+    cnt_split = int(X.shape[2]/n_split)
+    out = np.zeros((X.shape[0], X.shape[1], cnt_split))
+    for i in tqdm(range(out.shape[0]), desc="compute_rhythm"):
+        for j in range(out.shape[1]):
+            tmp_ts = X[i,j,:]
+            tmp_ts_cut = np.split(tmp_ts, X.shape[2]/n_split)
+            for k in range(cnt_split):
+                out[i, j, k] = np.std(tmp_ts_cut[k])
+    return out
+
+def compute_freq(X):
+    out = np.zeros((X.shape[0], X.shape[1], 1))
+    fs = 300
+    for i in tqdm(range(out.shape[0]), desc="compute_freq"):
+        for j in range(out.shape[1]):
+            _, Pxx_den = periodogram(X[i,j,:], fs)
+            out[i, j, 0] = np.sum(Pxx_den)
+    return out
+
+def make_data_physionet(data_path, n_split=50, window_size=3000, stride=500):
 
     # read pkl
     with open(os.path.join(data_path, 'challenge2017.pkl'), 'rb') as fin:
@@ -180,7 +205,6 @@ def make_data_physionet(data_path, window_size=3000, stride=500):
 
     # save
     res = {'Y_train': Y_train, 'Y_val': Y_val, 'Y_test': Y_test, 'pid_test': pid_test}
-    
     with open(os.path.join(data_path, 'mina_info.pkl'), 'wb') as fout:
         dill.dump(res, fout)
         
@@ -196,6 +220,49 @@ def make_data_physionet(data_path, window_size=3000, stride=500):
     np.save(fout, X_test_ml)
     fout.close()
 
+def make_knowledge_physionet(data_path, n_split=50):
+
+    # read
+    fin = open(os.path.join(data_path, 'mina_X_train.bin'), 'rb')
+    X_train = np.load(fin)
+    fin.close()
+    fin = open(os.path.join(data_path, 'mina_X_val.bin'), 'rb')
+    X_val = np.load(fin)
+    fin.close()
+    fin = open(os.path.join(data_path, 'mina_X_test.bin'), 'rb')
+    X_test = np.load(fin)
+    fin.close()
+
+    # compute knowledge
+    K_train_beat = compute_beat(X_train)
+    K_train_rhythm = compute_rhythm(X_train, n_split)
+    K_train_freq = compute_freq(X_train)
+
+    K_val_beat = compute_beat(X_val)
+    K_val_rhythm = compute_rhythm(X_val, n_split)
+    K_val_freq = compute_freq(X_val)
+
+    K_test_beat = compute_beat(X_test)
+    K_test_rhythm = compute_rhythm(X_test, n_split)
+    K_test_freq = compute_freq(X_test)
+
+    # save
+    fout = open(os.path.join(data_path, 'mina_K_train_beat.bin'), 'wb')
+    np.save(fout, K_train_beat)
+    fout.close()
+    fout = open(os.path.join(data_path, 'mina_K_val_beat.bin'), 'wb')
+    np.save(fout, K_val_beat)
+    fout.close()
+    fout = open(os.path.join(data_path, 'mina_K_test_beat.bin'), 'wb')
+    np.save(fout, K_test_beat)
+    fout.close()
+
+    res = {'K_train_rhythm': K_train_rhythm, 'K_train_freq': K_train_freq, 
+    'K_val_rhythm': K_val_rhythm, 'K_val_freq': K_val_freq, 
+    'K_test_rhythm': K_test_rhythm, 'K_test_freq': K_test_freq}
+    with open(os.path.join(data_path, 'mina_knowledge.pkl'), 'wb') as fout:
+        dill.dump(res, fout)
+
 def evaluate(gt, pred):
     '''
     gt is (0, C-1)
@@ -205,16 +272,13 @@ def evaluate(gt, pred):
     pred_label = []
     for i in pred:
         pred_label.append(np.argmax(i))
-        
-    gt_onehot = np.zeros_like(pred)
-    for i in range(len(gt)):
-        gt_onehot[pred_label[i]] = 1.0
-                
+    pred_label = np.array(pred_label)
+
     res = OrderedDict({})
     
-            
-    res['auc'] = roc_auc_score(gt_onehot, pred)
-    res['auprc'] = average_precision_score(gt_onehot, pred)
+    res['auroc'] = roc_auc_score(gt, pred[:,1])
+    res['auprc'] = average_precision_score(gt, pred[:,1])
+    res['f1'] = f1_score(gt, pred_label)
     
     res['\nmat'] = confusion_matrix(gt, pred_label)
     

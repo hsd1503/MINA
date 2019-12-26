@@ -6,7 +6,7 @@ import torch.optim as optim
 from torch.autograd import Variable
 from torch.utils.data import DataLoader, TensorDataset
 from torch.nn.utils.rnn import pack_padded_sequence
-from scipy.signal import periodogram
+from tqdm import tqdm
 
 import numpy as np
 import pickle as dill
@@ -16,7 +16,7 @@ import random
 
 import matplotlib.pyplot as plt
 import random
-from util import preprocess_physionet, make_data_physionet, evaluate
+from util import preprocess_physionet, make_data_physionet, make_knowledge_physionet, evaluate
 import sys, os
 from shutil import copyfile
 
@@ -204,8 +204,9 @@ def train(model, optimizer, loss_func, epoch, batch_size,
     batch_start_idx = 0
     batch_end_idx = 0
     loss_all = []
-    while batch_end_idx < n_train:
-        print('.', end="")
+    for _ in tqdm(range(n_train//batch_size+1), desc="train"):
+    # while batch_end_idx < n_train:
+        # print('.', end="")
         batch_end_idx = batch_end_idx + batch_size
         if batch_end_idx >= n_train:
             batch_end_idx = n_train
@@ -280,8 +281,9 @@ def test(model, batch_size,
     
     batch_start_idx = 0
     batch_end_idx = 0
-    while batch_end_idx < n_test:
-        print('.', end="")
+    for _ in tqdm(range(n_test//batch_size+1), desc="test"):
+    # while batch_end_idx < n_test:
+        # print('.', end="")
         batch_end_idx = batch_end_idx + batch_size
         if batch_end_idx >= n_test:
             batch_end_idx = n_test
@@ -332,34 +334,6 @@ def test(model, batch_size,
 
     return res, att_dic_all
 
-def compute_beat(X):
-    out = np.zeros((X.shape[0], X.shape[1], X.shape[2]))
-    for i in range(out.shape[0]):
-        for j in range(out.shape[1]):
-            out[i, j] = np.concatenate([[0], np.abs(np.diff(X[i,j,:]))])
-    return out
-
-def compute_rhythm(X, n_split):
-    cnt_split = int(X.shape[2]/n_split)
-    out = np.zeros((X.shape[0], X.shape[1], cnt_split))
-    for i in range(out.shape[0]):
-        for j in range(out.shape[1]):
-            tmp_ts = X[i,j,:]
-            tmp_ts_cut = np.split(tmp_ts, X.shape[2]/n_split)
-            for k in range(cnt_split):
-                out[i, j, k] = np.std(tmp_ts_cut[k])
-    return out
-
-def compute_freq(X):
-    out = np.zeros((X.shape[0], X.shape[1], 1))
-    fs = 300
-    for i in range(out.shape[0]):
-        for j in range(out.shape[1]):
-            _, Pxx_den = periodogram(X[i,j,:], fs)
-            out[i, j, 0] = np.sum(Pxx_den)
-    return out
-
-
 def run(data_path):
 
     n_epoch = 200
@@ -371,6 +345,10 @@ def run(data_path):
     ##################################################################
     run_id = 'mina_{0}'.format(strftime("%Y-%m-%d-%H-%M-%S", localtime()))
     directory = 'res/{0}'.format(run_id)
+    try:
+        os.stat('res/')
+    except:
+        os.mkdir('res/')    
     try:
         os.stat(directory)
     except:
@@ -394,6 +372,8 @@ def run(data_path):
     Y_train = res['Y_train']
     Y_val = res['Y_val']
     Y_test = res['Y_test']
+    print(Counter(Y_train), Counter(Y_val), Counter(Y_test))
+
     fin = open(os.path.join(data_path, 'mina_X_train.bin'), 'rb')
     X_train = np.load(fin)
     fin.close()
@@ -403,27 +383,42 @@ def run(data_path):
     fin = open(os.path.join(data_path, 'mina_X_test.bin'), 'rb')
     X_test = np.load(fin)
     fin.close()
-
     X_train = np.swapaxes(X_train, 0, 1)
     X_val = np.swapaxes(X_val, 0, 1)
     X_test = np.swapaxes(X_test, 0, 1)
-    print('load data done!')
     print(X_train.shape, X_val.shape, X_test.shape)
-    
-    ##################################################################
-    ### compute knowledge
-    ##################################################################
-    K_train_beat = compute_beat(X_train)
-    K_train_rhythm = compute_rhythm(X_train, n_split)
-    K_train_freq = compute_freq(X_train)
 
-    K_val_beat = compute_beat(X_val)
-    K_val_rhythm = compute_rhythm(X_val, n_split)
-    K_val_freq = compute_freq(X_val)
+    fin = open(os.path.join(data_path, 'mina_K_train_beat.bin'), 'rb')
+    K_train_beat = np.load(fin)
+    fin.close()
+    fin = open(os.path.join(data_path, 'mina_K_val_beat.bin'), 'rb')
+    K_val_beat = np.load(fin)
+    fin.close()
+    fin = open(os.path.join(data_path, 'mina_K_test_beat.bin'), 'rb')
+    K_test_beat = np.load(fin)
+    fin.close()
+    with open(os.path.join(data_path, 'mina_knowledge.pkl'), 'rb') as fin:
+        res = dill.load(fin)    
+    K_train_rhythm = res['K_train_rhythm']
+    K_train_freq = res['K_train_freq']
+    K_val_rhythm = res['K_val_rhythm']
+    K_val_freq = res['K_val_freq']
+    K_test_rhythm = res['K_test_rhythm']
+    K_test_freq = res['K_test_freq']
+    K_train_beat = np.swapaxes(K_train_beat, 0, 1)
+    K_train_rhythm = np.swapaxes(K_train_rhythm, 0, 1)
+    K_train_freq = np.swapaxes(K_train_freq, 0, 1)
+    K_val_beat = np.swapaxes(K_val_beat, 0, 1)
+    K_val_rhythm = np.swapaxes(K_val_rhythm, 0, 1)
+    K_val_freq = np.swapaxes(K_val_freq, 0, 1)
+    K_test_beat = np.swapaxes(K_test_beat, 0, 1)
+    K_test_rhythm = np.swapaxes(K_test_rhythm, 0, 1)
+    K_test_freq = np.swapaxes(K_test_freq, 0, 1)
+    print(K_train_beat.shape, K_train_rhythm.shape, K_train_freq.shape)
+    print(K_val_beat.shape, K_val_rhythm.shape, K_val_freq.shape)
+    print(K_test_beat.shape, K_test_rhythm.shape, K_test_freq.shape)
 
-    K_test_beat = compute_beat(X_test)
-    K_test_rhythm = compute_rhythm(X_test, n_split)
-    K_test_freq = compute_freq(X_test)    
+    print('load data done!')
     
     ##################################################################
     ### train
@@ -438,7 +433,6 @@ def run(data_path):
     model.cuda()
 
     optimizer = optim.Adam(model.parameters(), lr=lr)
-    print(np.sum(Y_train, axis=0))
     # weight = Variable(torch.FloatTensor([n_train/cnter[0], n_train/cnter[1]])).cuda()
     loss_func = torch.nn.CrossEntropyLoss()
 
@@ -485,28 +479,11 @@ def run(data_path):
     with open('{0}/res.pkl'.format(directory), 'wb') as fout:
         dill.dump(res, fout)
     
-
     np.savetxt('{0}/res_mat.csv'.format(directory), res_mat, delimiter=',')
     
-
     try:
         res = {'test_att_list':test_att_list}
         with open('{0}/res_att.pkl'.format(directory), 'wb') as fout:
             dill.dump(res, fout)
     except:
         print('error in saving attention file')
-    
-if __name__ == "__main__":
-
-    ## before running this data preparing code, 
-    ## please first download the raw data from https://physionet.org/content/challenge-2017/1.0.0/, 
-    ## and put it in data_path
-    data_path = '../../data/challenge2017/'
-    # preprocess_physionet(data_path) # uncomment if you don't have the raw data
-    # make_data_physionet(data_path) # uncomment if you don't have the preprocessed data
-    
-    for i_run in range(1):
-        run(data_path)
-
-
-
