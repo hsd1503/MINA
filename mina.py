@@ -9,16 +9,14 @@ from torch.nn.utils.rnn import pack_padded_sequence
 from scipy.signal import periodogram
 
 import numpy as np
-import dill
+import pickle as dill
 from collections import Counter
 from time import localtime, strftime
 import random
 
 import matplotlib.pyplot as plt
 import random
-from util import evaluate
-from util import slide_and_cut
-from util import make_challenge_data
+from util import preprocess_physionet, make_data_physionet, evaluate
 import sys, os
 from shutil import copyfile
 
@@ -362,7 +360,7 @@ def compute_freq(X):
     return out
 
 
-def run():
+def run(data_path):
 
     n_epoch = 200
     lr = 0.003
@@ -391,24 +389,25 @@ def run():
     ##################################################################
     ### read data
     ##################################################################
-    with open('data/label.pkl', 'rb') as fin:
+    with open(os.path.join(data_path, 'mina_info.pkl'), 'rb') as fin:
         res = dill.load(fin)    
     Y_train = res['Y_train']
     Y_val = res['Y_val']
     Y_test = res['Y_test']
-    fin = open('data/X_train.bin', 'rb')
+    fin = open(os.path.join(data_path, 'mina_X_train.bin'), 'rb')
     X_train = np.load(fin)
     fin.close()
-    fin = open('data/X_val.bin', 'rb')
+    fin = open(os.path.join(data_path, 'mina_X_val.bin'), 'rb')
     X_val = np.load(fin)
     fin.close()
-    fin = open('data/X_test.bin', 'rb')
+    fin = open(os.path.join(data_path, 'mina_X_test.bin'), 'rb')
     X_test = np.load(fin)
     fin.close()
 
     X_train = np.swapaxes(X_train, 0, 1)
     X_val = np.swapaxes(X_val, 0, 1)
     X_test = np.swapaxes(X_test, 0, 1)
+    print('load data done!')
     print(X_train.shape, X_val.shape, X_test.shape)
     
     ##################################################################
@@ -499,10 +498,15 @@ def run():
     
 if __name__ == "__main__":
 
-    make_challenge_data()
+    ## before running this data preparing code, 
+    ## please first download the raw data from https://physionet.org/content/challenge-2017/1.0.0/, 
+    ## and put it in data_path
+    data_path = '../../data/challenge2017/'
+    # preprocess_physionet(data_path) # uncomment if you don't have the raw data
+    # make_data_physionet(data_path) # uncomment if you don't have the preprocessed data
     
-    for i_run in range(10):
-        run()
+    for i_run in range(1):
+        run(data_path)
 
 
 
