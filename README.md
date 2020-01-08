@@ -3,8 +3,6 @@
 
 # Usage
 ```
-# Downloading the data from https://physionet.org/content/challenge-2017/1.0.0/, including REFERENCE-v3.csv, training2017/
-# Please use Revised labels (v3) at https://archive.physionet.org/challenge/2017/REFERENCE-v3.csv
 python main.py
 ```
 
@@ -21,3 +19,11 @@ If you find the idea useful or use this code in your own work, please cite our [
   pages={5888--5894}
 }
 ```
+
+# Dataset
+
+**Data** Training data can be found at https://archive.physionet.org/challenge/2017/#challenge-data
+
+**Label** Please use Revised labels (v3) at https://archive.physionet.org/challenge/2017/REFERENCE-v3.csv
+
+**Preprocessed** Or you can download my preprocessed dataset challenge2017.pkl from https://drive.google.com/drive/folders/1AuPxvGoyUbKcVaFmeyt3xsqj6ucWZezf
